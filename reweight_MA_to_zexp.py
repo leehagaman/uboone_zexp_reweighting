@@ -2,47 +2,8 @@
 import uproot
 import numpy as np
 import matplotlib.pyplot as plt
-from z_expansion_functions_values import F_A_z2, F_A_dipole, get_MA_effective, minerva_a_values, minerva_t0
-
-
-def get_weight(MA_eff, MA_grid, all_MA_weights):
-    """
-    For each event, interpolate (or linearly extrapolate) its reweighting factor
-    at MA_eff from the known weights at the discrete MA_grid points.
-
-    MA_eff         : (N,) effective MA per event, may contain nan
-    MA_grid        : (K,) sorted array of MA values at which weights are known
-    all_MA_weights : (N, K) event weights at each MA_grid point
-
-    Returns (N,) weight array; entries where MA_eff is nan (inversion undefined)
-    or where the result is otherwise invalid are set to 1.
-    """
-    # Replace nan MA_eff with a safe sentinel so searchsorted doesn't misbehave;
-    # those entries will be overwritten to 1 at the end.
-    MA_safe = np.where(np.isnan(MA_eff), MA_grid[0], MA_eff)
-
-    # Find the index of the left edge of the interval containing each MA_eff.
-    # searchsorted(..., side='right') - 1 gives the left neighbor index.
-    idx_lo = np.clip(
-        np.searchsorted(MA_grid, MA_safe, side='right') - 1,
-        0, len(MA_grid) - 2,
-    )
-    idx_hi = idx_lo + 1
-
-    # Fractional position within the interval [MA_grid[idx_lo], MA_grid[idx_hi]].
-    # t < 0  =>  MA_eff is below the grid  =>  linear extrapolation to the left.
-    # t > 1  =>  MA_eff is above the grid  =>  linear extrapolation to the right.
-    t = (MA_safe - MA_grid[idx_lo]) / (MA_grid[idx_hi] - MA_grid[idx_lo])
-
-    # Linear blend: w_lo*(1-t) + w_hi*t
-    arange = np.arange(len(MA_eff))
-    result = all_MA_weights[arange, idx_lo] * (1 - t) + all_MA_weights[arange, idx_hi] * t
-
-    # Revert any undefined or nonsensical entries to 1 (no reweighting).
-    bad = np.isnan(MA_eff) | np.isnan(result) | np.isinf(result) | (result < 0)
-    result[bad] = 1
-    return result
-
+from axial_form_factor_parametrizations import F_A_z2, F_A_dipole, get_MA_effective, minerva_a_values, minerva_t0
+from axial_form_factor_parametrizations import get_weight
 
 f = uproot.open("/nevis/riverside/data/leehagaman/ngem/data_files/nu_overlay_splines_50.root")
 

@@ -2,7 +2,7 @@ import os
 import numpy as np
 import uproot
 import matplotlib.pyplot as plt
-from z_expansion_functions_values import (
+from axial_form_factor_parametrizations import (
     F_A_z2, F_A_dipole,
     minerva_a_values, minerva_t0, minerva_a_universes,
     deuterium_a_values, deuterium_t0,
