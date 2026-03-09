@@ -10,4 +10,7 @@ Currently, the plan is to reweight to the MINERvA z-expansion axial form factor 
 python plot_F_A.py
 
 python reweight_MA_to_zexp.py
+
+python zexp_uncertainties.py
+
 ```
