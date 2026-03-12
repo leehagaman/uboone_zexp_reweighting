@@ -2,7 +2,7 @@ import numpy as np
 from scipy.optimize import fsolve
 
 
-pion_mass = 0.135 # GeV/c^2
+pion_mass = 0.139570 # GeV/c^2
 t_cut = 9 * pion_mass * pion_mass
 
 def F_A_z2(q2, a_values, t0):

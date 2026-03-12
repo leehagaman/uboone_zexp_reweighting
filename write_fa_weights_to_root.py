@@ -72,7 +72,7 @@ def main():
         print(f"Removing existing {DST}...")
         os.remove(DST)
 
-    print(f"Copying {SRC} → {DST}  (may take a few minutes)...")
+    print(f"Copying {SRC} → {DST}...")
     shutil.copy2(SRC, DST)
     print("Copy complete.")
 
