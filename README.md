@@ -49,17 +49,17 @@ The σ = 0 entry (index 3) equals `weight_minerva_FA` for every event.
 ## Scripts
 
 ```
+# Makes a comparison of different F_A vs Q^2 curves
 python plot_F_A.py
 
-python reweight_MA_to_zexp.py
-
+# Makes plots comparing different F_A treatments in true Q^2 as well as reco space
+# Done independently of any root file saving or loading
 python zexp_uncertainties.py
 
-
+# Adds new F_A spline weights to a root file
 python write_fa_weights_to_root.py /nevis/riverside/data/leehagaman/ngem/data_files/nu_overlay_splines_50.root;
-python write_fa_weights_to_root.py /nevis/riverside/data/leehagaman/ngem/data_files/run4b_dirt_surprise_200_splines.root;
 
+# Loads new F_A spline weights from a root file and makes some plots to visualize
 python plot_from_rootfile.py
-
 
 ```

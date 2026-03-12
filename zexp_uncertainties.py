@@ -54,6 +54,19 @@ for j in range(7):
 # Event weights for all 7 MA values; indices 0-6 → MA = 0.8 ... 1.4
 all_dipole_event_weights = [wc_weight_spline * all_MA_weights[:, j] for j in range(7)]
 
+# AxFFCCQEshape weights: index 0 = dipole, index 1 = z-expansion shape
+axff_raw = f["spline_weights"].arrays(["AxFFCCQEshape_UBGenie"], library="np")["AxFFCCQEshape_UBGenie"]
+all_axff_weights = np.column_stack([
+    np.array([x[j] for x in axff_raw])[true_numuCCQE_flags]
+    for j in range(2)
+])  # shape (N_events, 2)
+for j in range(2):
+    col = all_axff_weights[:, j]
+    col[np.isnan(col)] = 1
+    col[np.isinf(col)] = 1
+
+axff_event_weights = [wc_weight_spline * all_axff_weights[:, j] for j in range(2)]
+
 # --- M_A = 1.1 ± 0.1 dipole weights (for uncertainty band) ---
 # lo: MA=1.0 (index 2), cv: MA=1.1 (index 3), hi: MA=1.2 (index 4)
 dipole_weights_cv = all_dipole_event_weights[3]
@@ -153,6 +166,7 @@ def make_plot(x_values, bins, weights_default,
               all_dipole_w,
               minerva_w_cv, minerva_universe_w,
               pca_w_hi, pca_w_lo,
+              axff_w,
               xlabel, xscale, filename):
 
     n_default, _ = np.histogram(x_values, bins=bins, weights=weights_default)
@@ -168,9 +182,12 @@ def make_plot(x_values, bins, weights_default,
     n_pca_hi = [np.histogram(x_values, bins=bins, weights=w)[0] for w in pca_w_hi]
     n_pca_lo = [np.histogram(x_values, bins=bins, weights=w)[0] for w in pca_w_lo]
 
-    fig, (ax_main, ax_ratio, ax_frac) = plt.subplots(
-        3, 1, figsize=(8, 7), sharex=True,
-        gridspec_kw={"height_ratios": [3, 1, 2], "hspace": 0.07},
+    # AxFFCCQEshape histograms (shape=0: dipole, shape=1: z-expansion)
+    n_axff = [np.histogram(x_values, bins=bins, weights=w)[0] for w in axff_w]
+
+    fig, (ax_main, ax_ratio, ax_axff, ax_frac) = plt.subplots(
+        4, 1, figsize=(8, 9), sharex=True,
+        gridspec_kw={"height_ratios": [3, 1, 1, 2], "hspace": 0.07},
     )
 
     # --- Main histogram panel ---
@@ -186,7 +203,7 @@ def make_plot(x_values, bins, weights_default,
     if xscale == "log":
         ax_main.set_xscale("log")
 
-    # --- Ratio panel: everything / n at MA=1.1 ---
+    # --- MA ratio panel: everything / n at MA=1.1 ---
     for j, (n_ma, color) in enumerate(zip(n_all_ma, MA_COLORS)):
         ma_val = MA_grid[j]
         ax_ratio.stairs(_ratio(n_ma, n_dipole_cv), bins, color=color,
@@ -194,12 +211,31 @@ def make_plot(x_values, bins, weights_default,
     ax_ratio.stairs(_ratio(n_minerva_cv, n_dipole_cv), bins,
                     color="black", linewidth=1.5, label="MINERvA z-exp.")
     ax_ratio.axhline(1, color="black", linestyle=":", alpha=0.5)
-    ax_ratio.set_ylabel(r"Events / Events at $M_A=1.1$")
     ax_ratio.set_xlim(bins[0], bins[-1])
     ax_ratio.set_ylim(0.5, 1.5)
     ax_ratio.legend(fontsize=6, ncol=4, loc="upper right")
     if xscale == "log":
         ax_ratio.set_xscale("log")
+
+    # --- AxFFCCQEshape ratio panel: shape=0 and shape=1 / n at MA=1.1 ---
+    ax_axff.stairs(_ratio(n_axff[0], n_dipole_cv), bins, color="C0", linewidth=1.5,
+                   label="AxFFCCQEshape=0 (dipole)")
+    ax_axff.stairs(_ratio(n_axff[1], n_dipole_cv), bins, color="C1", linewidth=1.5,
+                   label="AxFFCCQEshape=1 (z-exp.)")
+    ax_axff.axhline(1, color="black", linestyle=":", alpha=0.5)
+    ax_axff.set_xlim(bins[0], bins[-1])
+    ax_axff.set_ylim(0.5, 1.5)
+    ax_axff.legend(fontsize=7, loc="upper right")
+    if xscale == "log":
+        ax_axff.set_xscale("log")
+
+    # Shared y-axis label for the two ratio panels
+    fig.canvas.draw()
+    pos_ratio = ax_ratio.get_position()
+    pos_axff = ax_axff.get_position()
+    mid_y = (pos_ratio.y1 + pos_axff.y0) / 2
+    fig.text(0.01, mid_y, r"Events / Events at $M_A=1.1$",
+             va="center", ha="left", rotation="vertical", fontsize=9)
 
     # --- Fractional uncertainty panel ---
     frac_dipole = frac_half_width(n_dipole_cv, n_dipole_lo, n_dipole_hi)
@@ -211,24 +247,30 @@ def make_plot(x_values, bins, weights_default,
     frac_pca = [np.abs(frac_half_width(n_minerva_cv, n_pca_lo[i], n_pca_hi[i])) for i in range(4)]
     frac_pca_quadsum = np.sqrt(sum(f**2 for f in frac_pca))
 
-    """print(f"\n--- Fractional uncertainties per bin [{filename}] ---")
-    print(f"{'Bin':>5}  {'lo edge':>10}  {'hi edge':>10}  {'dipole':>8}  {'minerva':>8}  " +
-          "  ".join(f"{'PCA'+str(i+1):>8}" for i in range(4)) + "  {'quadsum':>8}")
-    for b in range(len(bins) - 1):
-        pca_vals = "  ".join(f"{frac_pca[i][b]:8.4f}" for i in range(4))
-        print(f"{b:>5}  {bins[b]:10.4g}  {bins[b+1]:10.4g}  {frac_dipole[b]:8.4f}  "
-              f"{frac_minerva[b]:8.4f}  {pca_vals}  {frac_pca_quadsum[b]:8.4f}")
-    """
+    # AxFFCCQEshape: uncertainty from difference between shape=0 and shape=1
+    n_axff_lo = np.minimum(n_axff[0], n_axff[1])
+    n_axff_hi = np.maximum(n_axff[0], n_axff[1])
+    frac_axff = frac_half_width(n_dipole_cv, n_axff_lo, n_axff_hi)
 
-    ax_frac.stairs(frac_dipole, bins, color="steelblue", label=r"Dipole $M_A = 1.1 \pm 0.1$ GeV")
-    ax_frac.stairs(frac_minerva, bins, color="black", label="MINERvA z-exp. (universes)")
+    # Dipole + AxFFCCQEshape in quadrature
+    frac_dipole_and_axff = np.sqrt(frac_dipole**2 + frac_axff**2)
+
+    ax_frac.stairs(frac_dipole, bins, color="steelblue", linestyle="--",
+                   label=r"Dipole $M_A = 1.1 \pm 0.1$ GeV")
+    ax_frac.stairs(frac_minerva, bins, color="black",
+                   label="MINERvA z-exp. (universes)")
     for i, (frac, color) in enumerate(zip(frac_pca, PCA_COLORS)):
-        ax_frac.stairs(frac, bins, color=color, label=f"MINERvA PCA component {i+1}")
-    ax_frac.stairs(frac_pca_quadsum, bins, color="red", linestyle="--",
+        ax_frac.stairs(frac, bins, color=color, linestyle="--",
+                       label=f"MINERvA PCA component {i+1}")
+    ax_frac.stairs(frac_pca_quadsum, bins, color="red",
                    label="MINERvA z-exp. quad. sum")
+    ax_frac.stairs(frac_axff, bins, color="purple", linestyle="--",
+                   label="AxFFCCQEshape (0 vs 1)")
+    ax_frac.stairs(frac_dipole_and_axff, bins, color="darkorange",
+                   label=r"Dipole $\oplus$ AxFFCCQEshape")
     ax_frac.set_xlabel(xlabel)
     ax_frac.set_ylabel("Frac. unc.")
-    ax_frac.set_ylim(0, 0.3)
+    ax_frac.set_ylim(0, 0.5)
     ax_frac.set_xlim(bins[0], bins[-1])
     ax_frac.legend(fontsize=7, loc="upper right")
     if xscale == "log":
@@ -248,6 +290,7 @@ make_plot(
     all_dipole_w=all_dipole_event_weights,
     minerva_w_cv=minerva_weights_cv, minerva_universe_w=minerva_universe_event_weights,
     pca_w_hi=pca_weights_hi, pca_w_lo=pca_weights_lo,
+    axff_w=axff_event_weights,
     xlabel="WC kine_reco_Enu (MeV)", xscale="linear",
     filename="plots/uncertainty_wc_energy.png",
 )
@@ -262,6 +305,7 @@ make_plot(
     all_dipole_w=all_dipole_event_weights,
     minerva_w_cv=minerva_weights_cv, minerva_universe_w=minerva_universe_event_weights,
     pca_w_hi=pca_weights_hi, pca_w_lo=pca_weights_lo,
+    axff_w=axff_event_weights,
     xlabel=r"True $Q^2$ (GeV$^2$)", xscale="log",
     filename="plots/uncertainty_true_q2.png",
 )

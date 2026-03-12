@@ -127,9 +127,9 @@ for ax in axes:
     ax.set_xscale("log")
     ax.set_xlim(Q2_bins[0], Q2_bins[-1])
 
-plt.savefig("plots/variations_vs_true_Q2_fromroot.png", dpi=150, bbox_inches="tight")
+plt.savefig("plots/fromroot_variations_vs_true_Q2.png", dpi=150, bbox_inches="tight")
 plt.close()
-print("Saved plots/variations_vs_true_Q2_fromroot.png")
+print("Saved plots/fromroot_variations_vs_true_Q2.png")
 
 # ============================================================
 # Plot 2: fractional uncertainty comparison
@@ -214,6 +214,6 @@ ax.set_ylabel("Fractional uncertainty (half-width, 16th/84th pctile)")
 ax.set_title("Fractional uncertainty comparison")
 ax.legend(fontsize=8)
 plt.tight_layout()
-plt.savefig("plots/fractional_uncertainty_comparison_fromroot.png", dpi=150)
+plt.savefig("plots/fromroot_fractional_uncertainty_comparison.png", dpi=150)
 plt.close()
-print("Saved plots/fractional_uncertainty_comparison_fromroot.png")
+print("Saved plots/fromroot_fractional_uncertainty_comparison.png")
