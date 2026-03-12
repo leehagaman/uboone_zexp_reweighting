@@ -97,7 +97,7 @@ MA_COLORS = plt.cm.RdYlBu_r(np.linspace(0.05, 0.95, 6))
 for ma_val, idx, color in zip(MA_target, MA_target_indices, MA_COLORS):
     r = ratio_hist(weight_spline * all_MA_weights[:, idx], w_ref_MA, true_q2, Q2_bins)
     ax_ma.stairs(r, Q2_bins, color=color, label=rf"$M_A={ma_val:.1f}$", linewidth=1.5)
-r_min = ratio_hist(weight_minerva_FA, w_ref_MA, true_q2, Q2_bins)
+r_min = ratio_hist(weight_spline * weight_minerva_FA, w_ref_MA, true_q2, Q2_bins)
 ax_ma.stairs(r_min, Q2_bins, color="black", linewidth=1.5, linestyle="--",
              label="MINERvA z-exp. CV")
 ax_ma.axhline(1, color="gray", linestyle=":", alpha=0.6)
@@ -170,10 +170,10 @@ for u in range(N_UNI):
         idx_hi = idx_lo + 1
         t = (s - SIGMA_VALUES[idx_lo]) / (SIGMA_VALUES[idx_hi] - SIGMA_VALUES[idx_lo])
         combined_ratio *= pca_ratios[i][:, idx_lo] * (1 - t) + pca_ratios[i][:, idx_hi] * t
-    pca_universe_weights.append(weight_minerva_FA * combined_ratio)
+    pca_universe_weights.append(weight_spline * weight_minerva_FA * combined_ratio)
 print("Done.")
 
-n_cv_min, _ = np.histogram(true_q2, bins=Q2_bins, weights=weight_minerva_FA)
+n_cv_min, _ = np.histogram(true_q2, bins=Q2_bins, weights=weight_spline * weight_minerva_FA)
 n_lo_pca, n_hi_pca = hist_band(true_q2, pca_universe_weights, Q2_bins)
 frac_pca_uni = frac_half_width(n_cv_min, n_lo_pca, n_hi_pca)
 
