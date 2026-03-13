@@ -10,17 +10,20 @@ from axial_form_factor_parametrizations import (
 
 os.makedirs("plots", exist_ok=True)
 
-f = uproot.open("/nevis/riverside/data/leehagaman/ngem/data_files/nu_overlay_splines_50.root")
+#f = uproot.open("/nevis/riverside/data/leehagaman/ngem/data_files/nu_overlay_splines_50.root")
+f = uproot.open("/nevis/riverside/data/leehagaman/ngem/data_files/run4b_nuoverlay_retuple_splines.root")
 
 true_q2_values_all = f["singlephotonana"]["eventweight_tree"]["GTruth_gQ2"].array(library="np")
 true_scatter_values_all = f["singlephotonana"]["eventweight_tree"]["GTruth_Gscatter"].array(library="np")
 true_NC_values_all = f["singlephotonana"]["eventweight_tree"]["MCTruth_neutrino_CCNC"].array(library="np")
 nu_pdg_values_all = f["singlephotonana"]["eventweight_tree"]["GTruth_ProbePDG"].array(library="np")
+match_isFC_values_all = f["wcpselection"]["T_eval"]["match_isFC"].array(library="np")
 
 true_numuCCQE_flags = (nu_pdg_values_all == 14) & (true_NC_values_all == 0) & (true_scatter_values_all == 1)
 
 true_q2_values = true_q2_values_all[true_numuCCQE_flags]
 wc_energies = f["wcpselection"]["T_KINEvars"].arrays("kine_reco_Enu", library="np")["kine_reco_Enu"][true_numuCCQE_flags]
+match_isFC_values = match_isFC_values_all[true_numuCCQE_flags]
 
 # reco muon 4-momentum [px, py, pz, E] in GeV from T_PFeval
 reco_muon_p4 = f["wcpselection"]["T_PFeval"].arrays(["reco_muonMomentum"], library="np")["reco_muonMomentum"][true_numuCCQE_flags]
@@ -52,7 +55,7 @@ for j in range(7):
     col[np.isinf(col)] = 1
 
 # Event weights for all 7 MA values; indices 0-6 → MA = 0.8 ... 1.4
-all_dipole_event_weights = [wc_weight_spline * all_MA_weights[:, j] for j in range(7)]
+all_dipole_event_weights = np.array([wc_weight_spline * all_MA_weights[:, j] for j in range(7)])
 
 # AxFFCCQEshape weights: index 0 = dipole, index 1 = z-expansion shape
 axff_raw = f["spline_weights"].arrays(["AxFFCCQEshape_UBGenie"], library="np")["AxFFCCQEshape_UBGenie"]
@@ -162,14 +165,13 @@ def _ratio(n_num, n_denom):
         return np.where(n_denom > 0, n_num / n_denom, np.nan)
 
 
-def make_plot(x_values, bins, weights_default,
+def make_plot(x_values, bins,
               all_dipole_w,
               minerva_w_cv, minerva_universe_w,
               pca_w_hi, pca_w_lo,
               axff_w,
               xlabel, xscale, filename):
 
-    n_default, _ = np.histogram(x_values, bins=bins, weights=weights_default)
     # histograms for all 7 MA values; index 3 (MA=1.1) is the reference
     n_all_ma = [np.histogram(x_values, bins=bins, weights=w)[0] for w in all_dipole_w]
     n_dipole_cv = n_all_ma[3]   # MA=1.1
@@ -191,7 +193,6 @@ def make_plot(x_values, bins, weights_default,
     )
 
     # --- Main histogram panel ---
-    ax_main.stairs(n_default, bins, color="black", label="Default weights")
     plot_with_bands(ax_main, bins, n_dipole_cv, n_dipole_lo, n_dipole_hi,
                     color="steelblue", label=r"Dipole $M_A = 1.1 \pm 0.1$ GeV")
     plot_with_bands(ax_main, bins, n_minerva_cv, n_minerva_lo, n_minerva_hi,
@@ -213,7 +214,7 @@ def make_plot(x_values, bins, weights_default,
     ax_ratio.axhline(1, color="black", linestyle=":", alpha=0.5)
     ax_ratio.set_xlim(bins[0], bins[-1])
     ax_ratio.set_ylim(0.5, 1.5)
-    ax_ratio.legend(fontsize=6, ncol=4, loc="upper right")
+    ax_ratio.legend(fontsize=6, ncol=2, loc="upper right")
     if xscale == "log":
         ax_ratio.set_xscale("log")
 
@@ -283,16 +284,26 @@ def make_plot(x_values, bins, weights_default,
 # ============================================================
 # Plot 1: WC reco Enu
 # ============================================================
+
+true_q2_values_FC = true_q2_values[match_isFC_values]
+wc_energies_FC = wc_energies[match_isFC_values]
+all_dipole_event_weights_FC = all_dipole_event_weights[:, match_isFC_values]
+minerva_weights_cv_FC = minerva_weights_cv[match_isFC_values]
+minerva_universe_event_weights_FC = np.array(minerva_universe_event_weights)[:, match_isFC_values]
+pca_weights_hi_FC = np.array(pca_weights_hi)[:, match_isFC_values]
+pca_weights_lo_FC = np.array(pca_weights_lo)[:, match_isFC_values]
+axff_event_weights_FC = np.array(axff_event_weights)[:, match_isFC_values]
+weights_FC = weights[match_isFC_values]
+
 make_plot(
-    x_values=wc_energies,
+    x_values=wc_energies_FC,
     bins=np.linspace(0, 2500, 26),
-    weights_default=weights,
-    all_dipole_w=all_dipole_event_weights,
-    minerva_w_cv=minerva_weights_cv, minerva_universe_w=minerva_universe_event_weights,
-    pca_w_hi=pca_weights_hi, pca_w_lo=pca_weights_lo,
-    axff_w=axff_event_weights,
-    xlabel="WC kine_reco_Enu (MeV)", xscale="linear",
-    filename="plots/uncertainty_wc_energy.png",
+    all_dipole_w=all_dipole_event_weights_FC,
+    minerva_w_cv=minerva_weights_cv_FC, minerva_universe_w=minerva_universe_event_weights_FC,
+    pca_w_hi=pca_weights_hi_FC, pca_w_lo=pca_weights_lo_FC,
+    axff_w=axff_event_weights_FC,
+    xlabel="WC kine_reco_Enu FC (MeV)", xscale="linear",
+    filename="plots/uncertainty_wc_energy_FC.png",
 )
 
 # ============================================================
@@ -300,8 +311,7 @@ make_plot(
 # ============================================================
 make_plot(
     x_values=true_q2_values,
-    bins=np.logspace(-2, 2, 41),
-    weights_default=weights,
+    bins=np.logspace(-3, 3, 41),
     all_dipole_w=all_dipole_event_weights,
     minerva_w_cv=minerva_weights_cv, minerva_universe_w=minerva_universe_event_weights,
     pca_w_hi=pca_weights_hi, pca_w_lo=pca_weights_lo,
@@ -310,7 +320,7 @@ make_plot(
     filename="plots/uncertainty_true_q2.png",
 )
 
-print("Saved plots/uncertainty_wc_energy.png and plots/uncertainty_true_q2.png")
+print("Saved plots/uncertainty_wc_energy_FC.png and plots/uncertainty_true_q2.png")
 
 # ============================================================
 # Plot 3: Reco muon energy in slices of muon angle
@@ -340,6 +350,7 @@ fig, axes = plt.subplots(
 
 for col, ((cos_lo, cos_hi), slabel) in enumerate(zip(cos_theta_slices, slice_labels)):
     mask = (cos_theta_mu >= cos_lo) & (cos_theta_mu < cos_hi)
+    mask = mask & match_isFC_values
 
     ax_main  = axes[0, col]
     ax_ratio = axes[1, col]
@@ -351,7 +362,6 @@ for col, ((cos_lo, cos_hi), slabel) in enumerate(zip(cos_theta_slices, slice_lab
 
     mu_E_slice = mu_E[mask]
 
-    n_default_s, _ = np.histogram(mu_E_slice, bins=bins_mu_E, weights=weights[mask])
     n_all_ma_s = [np.histogram(mu_E_slice, bins=bins_mu_E, weights=w[mask])[0] for w in all_dipole_event_weights]
     n_dipole_cv_s = n_all_ma_s[3]
     n_dipole_lo_s = n_all_ma_s[2]
@@ -364,8 +374,6 @@ for col, ((cos_lo, cos_hi), slabel) in enumerate(zip(cos_theta_slices, slice_lab
     n_pca_lo_s = [np.histogram(mu_E_slice, bins=bins_mu_E, weights=w[mask])[0] for w in pca_weights_lo]
 
     # Main panel
-    ax_main.stairs(n_default_s, bins_mu_E, color="black",
-                   label="Default weights" if col == 0 else None)
     plot_with_bands(ax_main, bins_mu_E, n_dipole_cv_s, n_dipole_lo_s, n_dipole_hi_s,
                     color="steelblue",
                     label=r"Dipole $M_A = 1.1 \pm 0.1$ GeV" if col == 0 else None)
@@ -390,7 +398,7 @@ for col, ((cos_lo, cos_hi), slabel) in enumerate(zip(cos_theta_slices, slice_lab
     ax_ratio.set_xlim(bins_mu_E[0], bins_mu_E[-1])
     if col == 0:
         ax_ratio.set_ylabel(r"Events / Events at $M_A=1.1$")
-        ax_ratio.legend(fontsize=5, ncol=4, loc="upper right")
+        ax_ratio.legend(fontsize=5, ncol=2, loc="upper right")
 
     # Fractional uncertainty panel
     frac_dipole_s = frac_half_width(n_dipole_cv_s, n_dipole_lo_s, n_dipole_hi_s)
@@ -414,8 +422,55 @@ for col, ((cos_lo, cos_hi), slabel) in enumerate(zip(cos_theta_slices, slice_lab
         ax_frac.set_ylabel("Frac. unc.")
         ax_frac.legend(fontsize=6)
 
-fig.suptitle("True numuCC QE Events — Reco muon energy in muon angle slices", fontsize=11)
-plt.savefig("plots/uncertainty_muon_energy_angle_slices.png", dpi=150)
+fig.suptitle("True numuCC QE Events — Reco FC Reco muon energy in muon angle slices", fontsize=11)
+plt.savefig("plots/uncertainty_muon_energy_angle_slices_FC.png", dpi=150)
 plt.close()
 
-print("Saved plots/uncertainty_muon_energy_angle_slices.png")
+print("Saved plots/uncertainty_muon_energy_angle_slices_FC.png")
+
+# ============================================================
+# Plot 4: Reco Q² = 2 E_ν E_μ (1 - cos θ_μ) - m_μ²
+# ============================================================
+m_mu = 0.10566  # GeV
+reco_q2 = 2 * (wc_energies / 1000) * mu_E * (1 - cos_theta_mu) - m_mu**2
+reco_q2_FC = reco_q2[match_isFC_values]
+
+make_plot(
+    x_values=reco_q2_FC,
+    bins=np.logspace(-3, 3, 41),
+    all_dipole_w=all_dipole_event_weights_FC,
+    minerva_w_cv=minerva_weights_cv_FC, minerva_universe_w=minerva_universe_event_weights_FC,
+    pca_w_hi=pca_weights_hi_FC, pca_w_lo=pca_weights_lo_FC,
+    axff_w=axff_event_weights_FC,
+    xlabel=r"Reco $Q^2 = 2E_\nu E_\mu(1-\cos\theta_\mu) - m_\mu^2$ (GeV$^2$)", xscale="log",
+    filename="plots/uncertainty_reco_q2_FC.png",
+)
+
+print("Saved plots/uncertainty_reco_q2_FC.png")
+
+# ============================================================
+# Plot 5: 2D histogram — true Q² vs reco Q²
+# ============================================================
+q2_bins = np.logspace(-3, 1, 41)
+
+fig, ax = plt.subplots(figsize=(7, 6))
+h, xedges, yedges, img = ax.hist2d(
+    true_q2_values_FC, reco_q2_FC,
+    bins=[q2_bins, q2_bins],
+    weights=weights_FC,
+    cmap="viridis",
+    cmin=1e-12
+)
+fig.colorbar(img, ax=ax, label="Events")
+ax.plot([q2_bins[0], q2_bins[-1]], [q2_bins[0], q2_bins[-1]],
+        color="red", linestyle="--", linewidth=1)
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_xlabel(r"True $Q^2$ (GeV$^2$)")
+ax.set_ylabel(r"Reco $Q^2 = 2E_\nu E_\mu(1-\cos\theta_\mu) - m_\mu^2$ (GeV$^2$)")
+ax.set_title("True numuCC QE Events Reco FC — True vs Reco $Q^2$")
+plt.tight_layout()
+plt.savefig("plots/true_vs_reco_q2_FC.png", dpi=150)
+plt.close()
+
+print("Saved plots/true_vs_reco_q2_FC.png")
