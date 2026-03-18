@@ -220,9 +220,9 @@ def make_plot(x_values, bins,
 
     # --- AxFFCCQEshape ratio panel: shape=0 and shape=1 / n at MA=1.1 ---
     ax_axff.stairs(_ratio(n_axff[0], n_dipole_cv), bins, color="C0", linewidth=1.5,
-                   label="AxFFCCQEshape=0 (dipole)")
+                   label="AxFFCCQEshape=0 (z-exp.)")
     ax_axff.stairs(_ratio(n_axff[1], n_dipole_cv), bins, color="C1", linewidth=1.5,
-                   label="AxFFCCQEshape=1 (z-exp.)")
+                   label="AxFFCCQEshape=1 (dipole)")
     ax_axff.axhline(1, color="black", linestyle=":", alpha=0.5)
     ax_axff.set_xlim(bins[0], bins[-1])
     ax_axff.set_ylim(0.5, 1.5)
