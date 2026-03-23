@@ -81,8 +81,46 @@ deuterium_hi = np.percentile(deuterium_curves, 84, axis=0)
 fig, ax = plt.subplots(figsize=(8, 6))
 
 # deuterium
-ax.plot(q2_values, fa_deuterium / fa_ref, label="Deuterium z-expansion", color="blue")
-ax.fill_between(q2_values, deuterium_lo / fa_ref, deuterium_hi / fa_ref, alpha=0.2, color="blue")
+ax.plot(q2_values, fa_deuterium / fa_ref, label="Deuterium z-expansion", color="orange")
+ax.fill_between(q2_values, deuterium_lo / fa_ref, deuterium_hi / fa_ref, alpha=0.2, color="yellow")
+
+# MINERvA
+ax.plot(q2_values, fa_minerva / fa_ref, label="MINERvA z-expansion", color="red")
+ax.fill_between(q2_values, minerva_lo / fa_ref, minerva_hi / fa_ref, alpha=0.2, color="red")
+
+# MiniBooNE
+#ax.plot(q2_values, fa_miniboone / fa_ref, label=r"MiniBooNE $M_A = 1.35 \pm 0.17$ GeV", color="purple")
+#ax.fill_between(q2_values, fa_miniboone_lo / fa_ref, fa_miniboone_hi / fa_ref, alpha=0.2, color="purple")
+
+# MicroBooNE Prior
+#ax.plot(q2_values, fa_dipole_1p1 / fa_ref, label=r"Dipole $M_A = 1.1 \pm 0.1$ GeV (uB prior)", color="k")
+#ax.fill_between(q2_values, fa_dipole_1p2 / fa_ref, fa_dipole_1p0 / fa_ref, alpha=0.2, color="k")
+
+# Spline Spread
+ax.plot(q2_values, fa_dipole_0p8 / fa_ref, label=r"$M_A = 0.8$ GeV", color="green")
+ax.plot(q2_values, fa_dipole_1p4 / fa_ref, label=r"$M_A = 1.4$ GeV", color="green")
+
+# MicroBooNE Q^2 distribution
+ax.hist(true_q2_values, bins=np.logspace(-2, np.log10(10), 26), weights=weights*0.001, label=r"MicroBooNE $Q^2$ distribution", color="gray", alpha=0.5, zorder=-10)
+
+ax.axhline(1, color="black", linestyle=":", alpha=0.5)
+
+ax.set_xlabel(r"$Q^2$ (GeV$^2$)")
+ax.set_xscale("log")
+ax.set_ylabel(r"$F_A(Q^2)$ / Dipole $M_A = 1.014$ GeV")
+ax.set_ylim(0, 4)
+ax.set_title(r"Axial Form Factor Ratio to Dipole $M_A = 1.014$ GeV")
+ax.legend()
+ax.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig("plots/F_A_comparison_simplest.png", dpi=150)
+plt.close()
+
+fig, ax = plt.subplots(figsize=(8, 6))
+
+# deuterium
+ax.plot(q2_values, fa_deuterium / fa_ref, label="Deuterium z-expansion", color="orange")
+ax.fill_between(q2_values, deuterium_lo / fa_ref, deuterium_hi / fa_ref, alpha=0.2, color="yellow")
 
 # MINERvA
 ax.plot(q2_values, fa_minerva / fa_ref, label="MINERvA z-expansion", color="red")
@@ -221,8 +259,8 @@ ax2.fill_between(q2_values, deuterium_lo / fa_ref, deuterium_hi / fa_ref, alpha=
 """
 
 # MINERvA
-ax2.plot(q2_values, fa_minerva / fa_ref, label="MINERvA z-expansion (new prior)", color="red")
-ax2.fill_between(q2_values, minerva_lo / fa_ref, minerva_hi / fa_ref, alpha=0.2, color="red")
+ax2.plot(q2_values, fa_minerva / fa_ref, label="MINERvA z-expansion (new prior)", color="orange")
+ax2.fill_between(q2_values, minerva_lo / fa_ref, minerva_hi / fa_ref, alpha=0.2, color="yellow")
 
 """
 # MiniBooNE
@@ -241,9 +279,9 @@ ax2.fill_between(q2_values, uboone_lo / fa_ref, uboone_hi / fa_ref, alpha=0.2, c
 # MicroBooNE extracted M_A (dipole)
 ax2.plot(q2_values, fa_ma_uboone / fa_ref,
          label=rf"MicroBooNE dipole $M_A = {ma_uboone_gev:.3f} \pm {ma_uboone_postfit_gev:.3f}$ GeV",
-         color="orange")
+         color="blue")
 ax2.fill_between(q2_values, fa_ma_uboone_lo / fa_ref, fa_ma_uboone_hi / fa_ref,
-                 alpha=0.2, color="orange")
+                 alpha=0.2, color="blue")
 
 # MicroBooNE Q^2 distribution
 ax2.hist(true_q2_values, bins=np.logspace(-2, np.log10(10), 26), weights=weights*0.001, label=r"MicroBooNE $Q^2$ distribution", color="gray", alpha=0.5, zorder=-10)
@@ -274,9 +312,9 @@ ax2b.fill_between(q2_values, uboone_lo / fa_ref, uboone_hi / fa_ref, alpha=0.2, 
 
 ax2b.plot(q2_values, fa_ma_uboone / fa_ref,
           label=rf"MicroBooNE dipole $M_A = {ma_uboone_gev:.3f} \pm {ma_uboone_postfit_gev:.3f}$ GeV",
-          color="orange")
+          color="blue")
 ax2b.fill_between(q2_values, fa_ma_uboone_lo / fa_ref, fa_ma_uboone_hi / fa_ref,
-                  alpha=0.2, color="orange")
+                  alpha=0.2, color="blue")
 
 # MicroBooNE Q^2 distribution
 ax2b.hist(true_q2_values, bins=np.logspace(-2, np.log10(10), 26), weights=weights*0.001, label=r"MicroBooNE $Q^2$ distribution", color="gray", alpha=0.5, zorder=-10)
