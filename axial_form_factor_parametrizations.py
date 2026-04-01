@@ -181,6 +181,54 @@ deuterium_a_values = complete_a_values_8(deuterium_partial_a_values, initial_gue
 
 
 
+def F_A_z2_tc(q2, a_values, t0, tc):
+    """z-expansion for F_A with an explicit tc parameter."""
+    z = (np.sqrt(tc + q2) - np.sqrt(tc - t0)) / (np.sqrt(tc + q2) + np.sqrt(tc - t0))
+    ret = 0
+    for i in range(len(a_values)):
+        ret += a_values[i] * z**i
+    return ret
+
+
+def complete_a_values_6(a1_a2, t0, tc, gA=1.2754):
+    """Solve for (a0, a3, a4, a5, a6) given (a1, a2) for kmax=6.
+
+    Uses the positive gA convention: F_A(Q^2=0) = gA > 0.
+    Five constraints: F(0)=gA plus four sum rules (n=0,1,2,3).
+    """
+    a1, a2 = a1_a2
+    z0 = (np.sqrt(tc) - np.sqrt(tc - t0)) / (np.sqrt(tc) + np.sqrt(tc - t0))
+
+    def equations(x):
+        a0, a3, a4, a5, a6 = x
+        F0_eq = (a0 + a1*z0 + a2*z0**2 + a3*z0**3
+                 + a4*z0**4 + a5*z0**5 + a6*z0**6 - gA)
+        sr0 = a0 + a1 + a2 + a3 + a4 + a5 + a6
+        sr1 = a1 + 2*a2 + 3*a3 + 4*a4 + 5*a5 + 6*a6
+        sr2 = 2*a2 + 6*a3 + 12*a4 + 20*a5 + 30*a6
+        sr3 = 6*a3 + 24*a4 + 60*a5 + 120*a6
+        return [F0_eq, sr0, sr1, sr2, sr3]
+
+    result = fsolve(equations, [0.72, 1.62, -0.28, -1.25, 0.60])
+    a0, a3, a4, a5, a6 = result
+    return [a0, a1, a2, a3, a4, a5, a6]
+
+
+# LQCD fit result (Meyer et al. 2025, arXiv:2512.14097, eqs. 39-41)
+# kmax=6, lambda=0; parameters from Tab. II: t0=-0.50 GeV^2, tc=9*(0.134 GeV)^2
+# Convention: gA > 0 — negate F_A when combining with curves that use gA < 0
+lqcd_t0 = -0.50          # GeV^2
+lqcd_tc = 9.0 * 0.134**2  # GeV^2
+
+# lqcd_a_values = [0.71742019, -1.72089706, 0.30982708, 1.62125837, -0.27506993, -1.25297945, 0.60044079]
+lqcd_partial_a_values = [-1.72089706, 0.30982708]  # free parameters (a1, a2)
+
+lqcd_cov_matrix = np.array([
+    [0.00265598, -0.00562374],
+    [-0.00562374,  0.01596000],
+])
+
+
 def get_weight(MA_eff, MA_grid, all_MA_weights):
     """
     For each event, interpolate (or linearly extrapolate) its reweighting factor

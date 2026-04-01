@@ -3,10 +3,12 @@ import numpy as np
 import uproot
 import matplotlib.pyplot as plt
 from axial_form_factor_parametrizations import (
-    F_A_z2, F_A_dipole,
+    F_A_z2, F_A_z2_tc, F_A_dipole,
     minerva_a_values, minerva_t0, minerva_a_universes, minerva_a_cov_matrix,
     deuterium_a_values, deuterium_t0,
     deuterium_partial_a_values, deuterium_a_cov_matrix, complete_a_values_8,
+    complete_a_values_6,
+    lqcd_t0, lqcd_tc, lqcd_a_values, lqcd_partial_a_values, lqcd_cov_matrix,
 )
 
 os.makedirs("plots", exist_ok=True)
@@ -78,6 +80,18 @@ deuterium_curves = np.array([F_A_z2(q2_values, a, deuterium_t0) for a in deuteri
 deuterium_lo = np.percentile(deuterium_curves, 16, axis=0)
 deuterium_hi = np.percentile(deuterium_curves, 84, axis=0)
 
+# LQCD central value and error band (Meyer et al. 2025, arXiv:2512.14097, eqs. 39-41)
+# The LQCD parametrization uses gA > 0; negate to match this codebase's gA < 0 convention.
+fa_lqcd = -F_A_z2_tc(q2_values, lqcd_a_values, lqcd_t0, lqcd_tc)
+rng_lqcd = np.random.default_rng(0)
+lqcd_samples = rng_lqcd.multivariate_normal(lqcd_partial_a_values, lqcd_cov_matrix, 1000)
+lqcd_curves = np.array([
+    -F_A_z2_tc(q2_values, complete_a_values_6(s, lqcd_t0, lqcd_tc), lqcd_t0, lqcd_tc)
+    for s in lqcd_samples
+])
+lqcd_lo = np.percentile(lqcd_curves, 16, axis=0)
+lqcd_hi = np.percentile(lqcd_curves, 84, axis=0)
+
 fig, ax = plt.subplots(figsize=(8, 6))
 
 # deuterium
@@ -87,6 +101,10 @@ ax.fill_between(q2_values, deuterium_lo / fa_ref, deuterium_hi / fa_ref, alpha=0
 # MINERvA
 ax.plot(q2_values, fa_minerva / fa_ref, label="MINERvA z-expansion", color="red")
 ax.fill_between(q2_values, minerva_lo / fa_ref, minerva_hi / fa_ref, alpha=0.2, color="red")
+
+# LQCD
+ax.plot(q2_values, fa_lqcd / fa_ref, label=r"LQCD z-expansion (Meyer et al. 2025)", color="teal")
+ax.fill_between(q2_values, lqcd_lo / fa_ref, lqcd_hi / fa_ref, alpha=0.2, color="teal")
 
 # MiniBooNE
 #ax.plot(q2_values, fa_miniboone / fa_ref, label=r"MiniBooNE $M_A = 1.35 \pm 0.17$ GeV", color="purple")
@@ -125,6 +143,10 @@ ax.fill_between(q2_values, deuterium_lo / fa_ref, deuterium_hi / fa_ref, alpha=0
 # MINERvA
 ax.plot(q2_values, fa_minerva / fa_ref, label="MINERvA z-expansion", color="red")
 ax.fill_between(q2_values, minerva_lo / fa_ref, minerva_hi / fa_ref, alpha=0.2, color="red")
+
+# LQCD
+ax.plot(q2_values, fa_lqcd / fa_ref, label=r"LQCD z-expansion (Meyer et al. 2025)", color="teal")
+ax.fill_between(q2_values, lqcd_lo / fa_ref, lqcd_hi / fa_ref, alpha=0.2, color="teal")
 
 # MiniBooNE
 ax.plot(q2_values, fa_miniboone / fa_ref, label=r"MiniBooNE $M_A = 1.35 \pm 0.17$ GeV", color="purple")
@@ -194,6 +216,9 @@ uboone_a_values = complete_a_values_8(
     t0=minerva_t0,
 )
 fa_uboone = F_A_z2(q2_values, uboone_a_values, minerva_t0)
+print("MicroBooNE extracted z-expansion a_i parameters (a_0 ... a_8):")
+for i, a in enumerate(uboone_a_values):
+    print(f"  a_{i} = {a:.6f}")
 
 # Uncertainty band: sample from postfit multivariate Gaussian (includes correlations)
 rng = np.random.default_rng(42)
@@ -262,6 +287,10 @@ ax2.fill_between(q2_values, deuterium_lo / fa_ref, deuterium_hi / fa_ref, alpha=
 ax2.plot(q2_values, fa_minerva / fa_ref, label="MINERvA z-expansion (new prior)", color="orange")
 ax2.fill_between(q2_values, minerva_lo / fa_ref, minerva_hi / fa_ref, alpha=0.2, color="yellow")
 
+# LQCD
+ax2.plot(q2_values, fa_lqcd / fa_ref, label=r"LQCD z-expansion (Meyer et al. 2025)", color="teal")
+ax2.fill_between(q2_values, lqcd_lo / fa_ref, lqcd_hi / fa_ref, alpha=0.2, color="teal")
+
 """
 # MiniBooNE
 ax2.plot(q2_values, fa_miniboone / fa_ref, label=r"MiniBooNE $M_A = 1.35 \pm 0.17$ GeV", color="purple")
@@ -307,6 +336,10 @@ print("Saved plots/F_A_uboone_extraction.png")
 
 fig2b, ax2b = plt.subplots(figsize=(8, 6))
 
+# LQCD
+ax2b.plot(q2_values, fa_lqcd / fa_ref, label=r"LQCD z-expansion (Meyer et al. 2025)", color="teal")
+ax2b.fill_between(q2_values, lqcd_lo / fa_ref, lqcd_hi / fa_ref, alpha=0.2, color="teal")
+
 ax2b.plot(q2_values, fa_uboone / fa_ref, label=r"MicroBooNE z-expansion (best fit $\pm 1\sigma$)", color="green")
 ax2b.fill_between(q2_values, uboone_lo / fa_ref, uboone_hi / fa_ref, alpha=0.2, color="green")
 
@@ -333,6 +366,46 @@ plt.tight_layout()
 plt.savefig("plots/F_A_uboone_extraction_only.png", dpi=150)
 plt.close()
 print("Saved plots/F_A_uboone_extraction_only.png")
+
+# ===========================================================================
+# Plot: LQCD + MINERvA + deuterium comparison (no MicroBooNE extracted curves)
+# ===========================================================================
+
+fig2c, ax2c = plt.subplots(figsize=(8, 6))
+
+# deuterium
+ax2c.plot(q2_values, fa_deuterium / fa_ref, label="Deuterium z-expansion", color="orange")
+ax2c.fill_between(q2_values, deuterium_lo / fa_ref, deuterium_hi / fa_ref, alpha=0.2, color="yellow")
+
+# MINERvA
+ax2c.plot(q2_values, fa_minerva / fa_ref, label="MINERvA z-expansion (new prior)", color="red")
+ax2c.fill_between(q2_values, minerva_lo / fa_ref, minerva_hi / fa_ref, alpha=0.2, color="red")
+
+# LQCD
+ax2c.plot(q2_values, fa_lqcd / fa_ref, label=r"LQCD z-expansion (Meyer et al. 2025)", color="teal")
+ax2c.fill_between(q2_values, lqcd_lo / fa_ref, lqcd_hi / fa_ref, alpha=0.2, color="teal")
+
+# MicroBooNE prior
+ax2c.plot(q2_values, fa_dipole_1p1 / fa_ref, label=r"Dipole $M_A = 1.1 \pm 0.1$ GeV (uB prior)", color="k")
+ax2c.fill_between(q2_values, fa_dipole_1p2 / fa_ref, fa_dipole_1p0 / fa_ref, alpha=0.2, color="k")
+
+# MicroBooNE Q^2 distribution
+ax2c.hist(true_q2_values, bins=np.logspace(-2, np.log10(10), 26), weights=weights*0.001, label=r"MicroBooNE $Q^2$ distribution", color="gray", alpha=0.5, zorder=-10)
+
+ax2c.axhline(1, color="black", linestyle=":", alpha=0.5)
+
+ax2c.set_xlabel(r"$Q^2$ (GeV$^2$)")
+ax2c.set_xlim(1e-2, 10)
+ax2c.set_xscale("log")
+ax2c.set_ylabel(r"$F_A(Q^2)$ / Dipole $M_A = 1.014$ GeV")
+ax2c.set_ylim(0, 4)
+ax2c.set_title(r"Axial Form Factor — LQCD, MINERvA, and Deuterium")
+ax2c.legend()
+ax2c.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig("plots/F_A_lqcd_comparison.png", dpi=150)
+plt.close()
+print("Saved plots/F_A_lqcd_comparison.png")
 
 # ===========================================================================
 # Plot: PCA parameter summary — pre-fit vs post-fit
